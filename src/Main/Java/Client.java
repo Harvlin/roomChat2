@@ -1,3 +1,4 @@
+package Java;
 import java.io.*;
 import java.net.*;
 
@@ -33,16 +34,18 @@ public class Client {
     }
 
     private static void authenticateUser(BufferedReader in, PrintWriter out, BufferedReader consoleInput) throws IOException {
-        String response;
+        String response = "Blank";
         do {
             response = in.readLine();
-            System.out.println(response);
-            if (response.contains("Enter your password:")) {
-                out.println(consoleInput.readLine());
-            } else if (response.contains("Enter a password:")) {
-                out.println(consoleInput.readLine());
-                username = consoleInput.readLine();
+            if (response != null) {
+                System.out.println(response);
+                if (response.contains("Enter your password: ")) {
+                    out.println(consoleInput.readLine());
+                } else if (response.contains("Enter a password: ")) {
+                    out.println(consoleInput.readLine());
+                    username = consoleInput.readLine();
+                }
             }
-        } while (!response.contains("joined the chat"));
+        } while (!"joined the chat".equals(response));
     }
 }

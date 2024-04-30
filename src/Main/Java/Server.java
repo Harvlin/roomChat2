@@ -1,12 +1,14 @@
+package Java;
 import java.io.*;
 import java.net.*;
 import java.sql.*;
 
 public class Server {
     private static final int PORT = 6666;
-    private static final String URL = "jdbc:mysql://localhost:3306/roomchat/";
+    private static final String URL = "jdbc:mysql://localhost:3306/roomchat";
+
     private static final String DB_USERNAME = "root";
-    private static final String DB_PASSWORD = " ";
+    private static final String DB_PASSWORD = "";
 
     public static void main(String[] args) {
         try {
@@ -34,8 +36,8 @@ public class Server {
         @Override
         public void run() {
             try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-                Connection connection = DriverManager.getConnection(URL, DB_USERNAME, DB_PASSWORD)) {
+                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                 Connection connection = DriverManager.getConnection(URL, DB_USERNAME, DB_PASSWORD)) {
                 if (!authenticateUser(connection, in, out)) {
                     return;
                 }
@@ -54,7 +56,7 @@ public class Server {
         }
 
         private boolean authenticateUser(Connection connection, BufferedReader in, PrintWriter out) throws IOException, SQLException {
-            out.print("Enter your username: ");
+            out.println("Enter your username: ");
             nickname = in.readLine();
 
             String checkUserQuery = "SELECT * FROM user WHERE name = ?";
@@ -63,13 +65,13 @@ public class Server {
                 try (ResultSet resultSet = preparedStatement.executeQuery()) {
                     if (!resultSet.next()) {
                         out.println("User doesn't exist. Please register");
-                        out.print("Enter a password: ");
+                        out.println("Enter a password: ");
                         String password = in.readLine();
                         registerUser(connection, password);
                         out.println("User registered. You can now log in.");
                         return false;
                     } else {
-                        out.print("Enter your password: ");
+                        out.println("Enter your password: ");
                         String password = in.readLine();
                         if (!password.equals(resultSet.getString("password"))) {
                             out.println("Invalid password.");
@@ -85,7 +87,7 @@ public class Server {
             String query = "INSERT INTO USER (name, password) VALUES (?, ?)";
             try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
                 preparedStatement.setString(1, nickname);
-                preparedStatement.setString(3, password);
+                preparedStatement.setString(2, password);
 
                 preparedStatement.executeUpdate();
             }
