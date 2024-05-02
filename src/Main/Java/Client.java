@@ -26,7 +26,7 @@ public class Client {
             messageReceiverThread.start();
             String userInput;
             while ((userInput = consoleInput.readLine()) != null) {
-                out.println(username + userInput);
+                out.println(username + ": " + userInput);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -34,7 +34,7 @@ public class Client {
     }
 
     private static void authenticateUser(BufferedReader in, PrintWriter out, BufferedReader consoleInput) throws IOException {
-        String response = "Blank";
+        String response;
         do {
             response = in.readLine();
             if (response != null) {
