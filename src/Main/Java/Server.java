@@ -1,43 +1,33 @@
 package Java;
-import java.io.*;
-import java.net.*;
 import java.sql.*;
-import java.util.HashMap;
-import java.util.Map;
+import java.net.*;
+import java.io.*;
+import java.util.*;
 
 public class Server {
+    private static final String URL = "";
+    private static final String UNAME = "";
+    private static final String PASS = "";
     private static final int PORT = 6666;
-    private static final String URL = "jdbc:mysql://localhost:3306/roomchat";
-    private static final Map<String , PrintWriter> clients = new HashMap<>();
-    private static final String DB_USERNAME = "root";
-    private static final String DB_PASSWORD = "";
+    private static final Map<String, PrintWriter> clients = new HashMap<>();
 
     public static void main(String[] args) {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
             try (ServerSocket serverSocket = new ServerSocket(PORT);
-                 Connection connection = DriverManager.getConnection(URL, DB_USERNAME, DB_PASSWORD)) {
-                System.out.println("Server Started");
-                loadConversationHistory(connection);
+                Connection connection = DriverManager.getConnection(URL, UNAME, PASS)
+            ) {
+                System.out.println("Server started");
+                loadConversation(connection);
                 while (true) {
                     Socket socket = serverSocket.accept();
-                    System.out.println("New client connected: " + socket);
-                    ClientHandler clientHandler = new ClientHandler(socket);
+                    System.out.println("Client connected" + socket);
+                    ClientHandler clientHandler = new ClientHandler (socket);
                     new Thread(clientHandler).start();
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
-        }
-    }
-    private static void loadConversationHistory(Connection connection) throws SQLException {
-        String query = "SELECT sender, message FROM message";
-        try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery(query)) {
-            while (resultSet.next()) {
-                String sender = resultSet.getString("sender");
-                String message = resultSet.getString("message");
-                broadcastMessage(sender + ": " + message, null);
-            }
         }
     }
     private static void broadcastMessage(String message, PrintWriter out) {
@@ -49,18 +39,28 @@ public class Server {
             }
         }
     }
-    private static class ClientHandler implements Runnable {
-        private final Socket socket;
-        private String nickname;
-        PrintWriter out;
-        public ClientHandler(Socket socket) {
-            this.socket = socket;
+    private static void loadConversation(Connection connection) throws SQLException {
+        String query = "SELECT sender, message FROM message";
+        try (Statement statement = connection.createStatement();
+            ResultSet resultSet = statement.executeQuery(query)) {
+            while (resultSet.next()) {
+                String sender = resultSet.getString("sender");
+                String message = resultSet.getString("message");
+                broadcastMessage(sender + ": " + message, null);
+            }
         }
+    }
+    private static class ClientHandler implements Runnable {
+        private String nickname;
+        private Socket socket;
+        PrintWriter out;
+        public ClientHandler (Socket socket) { this.socket = socket; }
 
         @Override
         public void run() {
             try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                 Connection connection = DriverManager.getConnection(URL, DB_USERNAME, DB_PASSWORD)) {
+                Connection connection = DriverManager.getConnection(URL, UNAME, PASS)
+            ) {
                 out = new PrintWriter(socket.getOutputStream(), true);
                 if (!authenticateUser(connection, in, out)) {
                     return;
@@ -68,7 +68,7 @@ public class Server {
                 synchronized (clients) {
                     clients.put(nickname, out);
                 }
-                broadcastMessage(nickname + " joined the chat", out);
+                broadcastMessage(nickname + " joined", out);
                 String message;
                 while ((message = in.readLine()) != null) {
                     if (message.equalsIgnoreCase("exit")) {
@@ -93,8 +93,9 @@ public class Server {
                     }
                 }
             }
+
         }
-        private boolean authenticateUser(Connection connection, BufferedReader in, PrintWriter out) throws IOException, SQLException {
+        private boolean authenticateUser(Connection connection, BufferedReader in, PrintWriter out) throws SQLException, IOException {
             out.println("Enter your username: ");
             nickname = in.readLine();
 
@@ -103,17 +104,17 @@ public class Server {
                 preparedStatement.setString(1, nickname);
                 try (ResultSet resultSet = preparedStatement.executeQuery()) {
                     if (!resultSet.next()) {
-                        out.println("User doesn't exist. Please register");
+                        out.println("User doesn't exist. Please Register.");
                         out.println("Enter a password: ");
                         String password = in.readLine();
                         registerUser(connection, password);
-                        out.println("User registered. You can now log in.");
+                        out.println("Registered, You can now log in");
                         return false;
                     } else {
                         out.println("Enter your password: ");
                         String password = in.readLine();
-                        if (!password.equals(resultSet.getString("password"))) {
-                            out.println("Invalid password.");
+                        if (!password.equals(resultSet.getString("Password"))) {
+                            out.println("Invalid Password");
                             return false;
                         }
                         return true;
@@ -122,11 +123,12 @@ public class Server {
             }
         }
         private void registerUser(Connection connection, String password) throws SQLException {
-            String query = "INSERT INTO USER (name, password) VALUES (?, ?)";
+            String query = "INSERT INTO user (name, password) VALUES (?, ?)";
             try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
                 preparedStatement.setString(1, nickname);
                 preparedStatement.setString(2, password);
                 preparedStatement.executeUpdate();
+
             }
         }
     }
