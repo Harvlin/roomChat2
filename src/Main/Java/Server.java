@@ -14,45 +14,20 @@ public class Server {
     public static void main(String[] args) {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
-            try (ServerSocket serverSocket = new ServerSocket(PORT);
-                Connection connection = DriverManager.getConnection(URL, UNAME, PASS)) {
+            try (ServerSocket serverSocket = new ServerSocket(PORT)) {
                 System.out.println("Server Started");
-                loadConversation(connection);
-
                 while (true) {
                     Socket socket = serverSocket.accept();
                     System.out.println("Client Connected" + socket);
                     ClientHandler clientHandler = new ClientHandler(socket);
                     new Thread (clientHandler).start();
                 }
-            } catch (SQLException | IOException e) {
+            } catch (IOException e) {
                 e.printStackTrace();
             }
         } catch (ClassNotFoundException e) {
             System.out.println("JDBC driver not found" + e.getMessage());
             e.printStackTrace();
-        }
-    }
-
-    private static void loadConversation(Connection connection) throws SQLException{
-        String query = "SELECT message, sender FROM message";
-        try (Statement statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery(query)) {
-            while (resultSet.next()) {
-                String message = resultSet.getString("message");
-                String sender = resultSet.getString("sender");
-                broadcastMessage(sender + ": " + message, null);
-            }
-        }
-    }
-
-    private static void broadcastMessage(String message, PrintWriter out) {
-        synchronized (clients) {
-            for (PrintWriter printWriter : clients.values()) {
-                if (printWriter != out) {
-                    printWriter.println(message);
-                }
-            }
         }
     }
 
@@ -76,6 +51,7 @@ public class Server {
                 synchronized (clients) {
                     clients.put(nickname, out);
                 }
+                loadConversation(connection);
                 broadcastMessage(nickname + " joined", out);
                 String message;
                 while ((message = in.readLine()) != null) {
@@ -98,6 +74,28 @@ public class Server {
                         socket.close();
                     } catch (IOException e) {
                         e.printStackTrace();
+                    }
+                }
+            }
+        }
+
+        private static void loadConversation(Connection connection) throws SQLException{
+            String query = "SELECT message, sender FROM message";
+            try (Statement statement = connection.createStatement();
+                 ResultSet resultSet = statement.executeQuery(query)) {
+                while (resultSet.next()) {
+                    String message = resultSet.getString("message");
+                    String sender = resultSet.getString("sender");
+                    broadcastMessage(sender + ": " + message, null);
+                }
+            }
+        }
+
+        private static void broadcastMessage(String message, PrintWriter out) {
+            synchronized (clients) {
+                for (PrintWriter printWriter : clients.values()) {
+                    if (printWriter != out) {
+                        printWriter.println(message);
                     }
                 }
             }
