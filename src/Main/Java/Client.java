@@ -4,7 +4,7 @@ import java.net.*;
 
 public class Client {
     private static final String SERVER_ADDRESS = "localhost";
-    private static final int SERVER_PORT = 6666;
+    private static final int SERVER_PORT = 3000;
     private static String username;
 
     public static void main(String[] args) {
@@ -29,7 +29,7 @@ public class Client {
 
             String userInput;
             while ((userInput = consoleInput.readLine()) != null) {
-                out.println(username + ": " + userInput);
+                out.println(userInput);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -38,18 +38,22 @@ public class Client {
 
     private static void authenticateUser(BufferedReader in, PrintWriter out, BufferedReader consoleInput) throws IOException {
         String response;
-        do {
+        while (true) {
             response = in.readLine();
             if (response != null) {
                 System.out.println(response);
-
-                if (response.contains("Enter your password: ")) {
-                    out.println(consoleInput.readLine());
-                } else if (response.contains("Enter a password: ")) {
-                    out.println(consoleInput.readLine());
+                if (response.contains("Enter your username: ")) {
                     username = consoleInput.readLine();
+                    out.println(username);
+                } else if (response.contains("Enter your password: ") || response.contains("Enter a password: ")) {
+                    String password = consoleInput.readLine();
+                    out.println(password);
+                } else if (response.contains("Registered, You can now log in.")) {
+                    break;
+                } else if (response.contains("Wrong password.") || response.contains("User doesn't exist.")) {
+                    continue;
                 }
             }
-        } while (!"joined the chat".equals(response));
+        }
     }
 }

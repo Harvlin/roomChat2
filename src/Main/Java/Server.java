@@ -1,15 +1,15 @@
 package Java;
 import java.util.*;
 import java.io.*;
-import java.sql.*;
 import java.net.*;
+import java.sql.*;
 
 public class Server {
-    private static final String URL = "jdbc:mysql://localhost/roomchat2";
+    private static final String URL = "jdbc:mysql://localhost:3306/roomchat2";
     private static final String UNAME = "root";
     private static final String PASS = "";
     private static final int PORT = 3000;
-    private static Map<String, PrintWriter> clients = new HashMap<>();
+    private static final Map<String, PrintWriter> clients = new HashMap<>();
 
     public static void main(String[] args) {
         try {
@@ -18,23 +18,19 @@ public class Server {
                 System.out.println("Server Started");
                 while (true) {
                     Socket socket = serverSocket.accept();
-                    System.out.println("Client Connected" + socket);
+                    System.out.println("Client connected " + socket);
                     ClientHandler clientHandler = new ClientHandler(socket);
-                    new Thread (clientHandler).start();
+                    new Thread(clientHandler).start();
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
             }
-        } catch (ClassNotFoundException e) {
-            System.out.println("JDBC driver not found" + e.getMessage());
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    static class ClientHandler implements Runnable{
+    static class ClientHandler implements Runnable {
+        private final Socket socket;
         private String nickname;
-        private Socket socket;
-        private PrintWriter out;
 
         public ClientHandler(Socket socket) {
             this.socket = socket;
@@ -43,16 +39,20 @@ public class Server {
         @Override
         public void run() {
             try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                Connection connection = DriverManager.getConnection(URL, UNAME, PASS)) {
-                out = new PrintWriter(socket.getOutputStream(), true);
+                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                 Connection connection = DriverManager.getConnection(URL, UNAME, PASS)) {
+
                 if (!authenticateUser(connection, in, out)) {
                     return;
                 }
+
                 synchronized (clients) {
                     clients.put(nickname, out);
                 }
-                loadConversation(connection);
-                broadcastMessage(nickname + " joined", out);
+
+                loadConversation(connection, out);
+                broadcastMessage(nickname + " joined the chat", out);
+
                 String message;
                 while ((message = in.readLine()) != null) {
                     if (message.equalsIgnoreCase("exit")) {
@@ -67,9 +67,7 @@ public class Server {
                     synchronized (clients) {
                         clients.remove(nickname);
                     }
-                    if (out != null) {
-                        broadcastMessage(nickname + " left the chat", out);
-                    }
+                    broadcastMessage(nickname + " left the chat", null);
                     try {
                         socket.close();
                     } catch (IOException e) {
@@ -79,23 +77,23 @@ public class Server {
             }
         }
 
-        private static void loadConversation(Connection connection) throws SQLException{
+        private void loadConversation(Connection connection, PrintWriter out) throws SQLException {
             String query = "SELECT message, sender FROM message";
             try (Statement statement = connection.createStatement();
                  ResultSet resultSet = statement.executeQuery(query)) {
                 while (resultSet.next()) {
                     String message = resultSet.getString("message");
                     String sender = resultSet.getString("sender");
-                    broadcastMessage(sender + ": " + message, null);
+                    out.println(sender + ": " + message);
                 }
             }
         }
 
-        private static void broadcastMessage(String message, PrintWriter out) {
+        private void broadcastMessage(String message, PrintWriter excludeOut) {
             synchronized (clients) {
-                for (PrintWriter printWriter : clients.values()) {
-                    if (printWriter != out) {
-                        printWriter.println(message);
+                for (PrintWriter clientOut : clients.values()) {
+                    if (clientOut != excludeOut) {
+                        clientOut.println(message);
                     }
                 }
             }
@@ -110,20 +108,21 @@ public class Server {
                 preparedStatement.setString(1, nickname);
                 try (ResultSet resultSet = preparedStatement.executeQuery()) {
                     if (!resultSet.next()) {
-                        out.println("User doesn't exist. Please register."); out.flush();
-                        out.println("Enter a password: "); out.flush();
+                        out.println("User doesn't exist. Please register.");
+                        out.println("Enter a password: ");
                         String password = in.readLine();
                         registerUser(connection, password);
-                        out.println("Registered, You can now log in."); out.flush();
+                        out.println("Registered. You can now log in.");
                         return false;
                     } else {
-                        out.println("Enter your password: "); out.flush();
+                        out.println("Enter your password: ");
                         String password = in.readLine();
                         if (!password.equals(resultSet.getString("password"))) {
-                            System.out.println("Wrong password.");
+                            out.println("Wrong password");
                             return false;
+                        } else {
+                            return true;
                         }
-                        return true;
                     }
                 }
             }
