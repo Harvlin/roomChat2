@@ -1,16 +1,18 @@
 package Java;
 import java.io.*;
 import java.net.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Client {
     private static final String SERVER_ADDRESS = "localhost";
-    private static final int SERVER_PORT = 3000;
+    private static final int SERVER_PORT = 8080;
     private static String username;
 
     public static void main(String[] args) {
         try (Socket socket = new Socket(SERVER_ADDRESS, SERVER_PORT);
              BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+             PrintWriter out = new PrintWriter(socket.getOutputStream());
              BufferedReader consoleInput = new BufferedReader(new InputStreamReader(System.in))
         ) {
             authenticateUser(in, out, consoleInput);
@@ -30,6 +32,7 @@ public class Client {
             String userInput;
             while ((userInput = consoleInput.readLine()) != null) {
                 out.println(userInput);
+                out.flush();
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -45,9 +48,11 @@ public class Client {
                 if (response.contains("Enter your username: ")) {
                     username = consoleInput.readLine();
                     out.println(username);
+                    out.flush();
                 } else if (response.contains("Enter your password: ") || response.contains("Enter a password: ")) {
                     String password = consoleInput.readLine();
                     out.println(password);
+                    out.flush();
                 } else if (response.contains("Registered, You can now log in.")) {
                     break;
                 } else if (response.contains("Wrong password.") || response.contains("User doesn't exist.")) {
