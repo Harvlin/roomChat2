@@ -88,8 +88,7 @@ public class Server {
                 while (resultSet.next()) {
                     String message = resultSet.getString("message");
                     String sender = resultSet.getString("sender");
-                    out.println(sender + ": " + message);
-                    out.flush();
+                    out.println(sender + ": " + message); out.flush();
                 }
             }
         }
@@ -98,8 +97,7 @@ public class Server {
             synchronized (clients) {
                 for (PrintWriter clientOut : clients.values()) {
                     if (clientOut != excludeOut) {
-                        clientOut.println(message);
-                        clientOut.flush();
+                        clientOut.println(message); clientOut.flush();
                     }
                 }
             }
@@ -115,22 +113,19 @@ public class Server {
                 preparedStatement.setString(1, nickname);
                 try (ResultSet resultSet = preparedStatement.executeQuery()) {
                     if (!resultSet.next()) {
-                        out.println("User doesn't exist. Please register.");
-                        out.flush();
-                        out.println("Enter a password: ");
-                        out.flush();
+                        out.println("User doesn't exist. Please register."); out.flush();
+                        out.println("Enter a password: "); out.flush();
+
                         String password = in.readLine();
                         registerUser(connection, password);
-                        out.println("Registered. You can now log in.");
-                        out.flush();
+
+                        out.println("Registered. You can now log in."); out.flush();
                         return false;
                     } else {
-                        out.println("Enter your password: ");
-                        out.flush();
+                        out.println("Enter your password: "); out.flush();
                         String password = in.readLine();
                         if (!password.equals(resultSet.getString("password"))) {
-                            out.println("Wrong password");
-                            out.flush();
+                            out.println("Wrong password"); out.flush();
                             return false;
                         } else {
                             return true;
